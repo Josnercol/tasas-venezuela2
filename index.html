@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#16a34a" />
+  <meta name="description" content="Tasas de cambio en tiempo real para Venezuela. Dólar, Euro, Bolívar — Yadio, BCV y promedio actualizado." />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Tasas Venezuela" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>Tasas Venezuela</title>
+  <style>
+    :root {
+      --green: #16a34a;
+      --green-light: #22c55e;
+      --green-dim: #dcfce7;
+      --green-text: #14532d;
+      --amber: #d97706;
+      --amber-dim: #fef3c7;
+      --amber-text: #78350f;
+      --red-dim: #fee2e2;
+      --red-text: #991b1b;
+      --bg: #f9fafb;
+      --surface: #ffffff;
+      --surface2: #f3f4f6;
+      --border: #e5e7eb;
+      --border2: #d1d5db;
+      --text: #111827;
+      --text2: #6b7280;
+      --text3: #9ca3af;
+      --radius: 14px;
+      --radius-sm: 8px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --green: #22c55e;
+        --green-light: #4ade80;
+        --green-dim: #14532d;
+        --green-text: #bbf7d0;
+        --amber: #fbbf24;
+        --amber-dim: #78350f;
+        --amber-text: #fef3c7;
+        --red-dim: #7f1d1d;
+        --red-text: #fecaca;
+        --bg: #0f172a;
+        --surface: #1e293b;
+        --surface2: #273549;
+        --border: #334155;
+        --border2: #475569;
+        --text: #f1f5f9;
+        --text2: #94a3b8;
+        --text3: #64748b;
+        --shadow: 0 1px 3px rgba(0,0,0,0.3);
+        --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    body {
+      padding-bottom: env(safe-area-inset-bottom, 16px);
+      min-height: 100dvh;
+    }
+
+    /* Header */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--green);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-icon svg { width: 18px; height: 18px; fill: white; }
+
+    .logo-name {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .logo-tag {
+      font-size: 11px;
+      color: var(--green);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .refresh-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 13px;
+      border-radius: 20px;
+      border: 1.5px solid var(--border2);
+      background: transparent;
+      color: var(--text2);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+
+    .refresh-btn:active { transform: scale(0.96); }
+
+    .refresh-btn svg {
+      width: 15px;
+      height: 15px;
+      transition: transform 0.6s;
+    }
+
+    .refresh-btn.loading svg { animation: spin 0.7s linear infinite; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Content */
+    .content {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px 16px 32px;
+    }
+
+    /* Live indicator */
+    .live-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .live-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--green-dim);
+      color: var(--green-text);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .update-time {
+      font-size: 12px;
+      color: var(--text3);
+    }
+
+    /* Rate cards */
+    .rates-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .rate-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.15s;
+    }
+
+    .rate-card:active { transform: scale(0.98); }
+
+    .rate-card.wide {
+      grid-column: 1 / -1;
+    }
+
+    .card-source {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .source-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    .source-name {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text2);
+    }
+
+    .rate-value {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .rate-unit {
+      font-size: 12px;
+      color: var(--text2);
+    }
+
+    .rate-skeleton {
+      background: var(--surface2);
+      border-radius: 6px;
+      animation: shimmer 1.2s ease-in-out infinite;
+    }
+
+    @keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* Divider */
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text3);
+      margin: 24px 0 12px;
+    }
+
+    /* Calculator */
+    .calc-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .calc-top {
+      padding: 18px 18px 16px;
+    }
+
+    .calc-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .calc-header svg {
+      width: 17px;
+      height: 17px;
+      color: var(--green);
+    }
+
+    .calc-header span {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+
+    /* Toggle arriba, input abajo */
+    .calc-toggle-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .toggle-btn {
+      flex: 1;
+      padding: 10px 0;
+      font-size: 13px;
+      font-weight: 700;
+      border: 1.5px solid var(--border2);
+      border-radius: var(--radius-sm);
+      background: var(--surface2);
+      color: var(--text2);
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+      letter-spacing: 0.01em;
+    }
+
+    .toggle-btn.active {
+      background: var(--green);
+      border-color: var(--green);
+      color: white;
+    }
+
+    .toggle-btn:active { transform: scale(0.97); }
+
+    .field-input {
+      width: 100%;
+      padding: 14px 16px;
+      font-size: 28px;
+      font-weight: 700;
+      border: 1.5px solid var(--border2);
+      border-radius: var(--radius-sm);
+      background: var(--surface2);
+      color: var(--text);
+      font-family: inherit;
+      letter-spacing: -0.02em;
+      -webkit-appearance: none;
+      transition: border-color 0.15s;
+    }
+
+    .field-input:focus {
+      outline: none;
+      border-color: var(--green);
+    }
+
+    /* Resultado: lista limpia sin bordes */
+    .convert-results {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .convert-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px 18px;
+      border-top: 1px solid var(--border);
+      gap: 10px;
+    }
+
+    .convert-row .source {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text2);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .convert-row .source-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .convert-row .value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--green);
+      letter-spacing: -0.02em;
+      text-align: right;
+    }
+
+    .calc-note {
+      font-size: 11px;
+      color: var(--text3);
+      padding: 12px 18px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+
+    /* Legacy — keep for compat */
+    .field-group, .field-row, .field-label, .field-select, .currency-toggle { display: none; }
+
+    /* Error banner */
+    .error-banner {
+      background: var(--red-dim);
+      color: var(--red-text);
+      font-size: 13px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .error-banner svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      margin-top: 28px;
+      font-size: 12px;
+      color: var(--text3);
+      line-height: 1.8;
+    }
+
+    .footer a { color: var(--green); text-decoration: none; }
+
+    /* Install prompt */
+    .install-bar {
+      background: var(--surface);
+      border: 1.5px solid var(--green);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .install-bar.visible { display: flex; }
+
+    .install-bar p {
+      flex: 1;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .install-bar p strong { color: var(--green); }
+
+    .install-btn-ok {
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: 20px;
+      padding: 7px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+
+    .install-btn-close {
+      background: transparent;
+      border: none;
+      color: var(--text3);
+      cursor: pointer;
+      padding: 4px;
+      flex-shrink: 0;
+    }
+
+    .install-btn-close svg { width: 16px; height: 16px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/></svg>
+      </div>
+      <div>
+        <div class="logo-name">Tasas Venezuela</div>
+        <div class="logo-tag">Venezuela</div>
+      </div>
+    </div>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadRates()" aria-label="Actualizar tasas">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"></polyline>
+        <polyline points="1 20 1 14 7 14"></polyline>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+      </svg>
+      Actualizar
+    </button>
+  </header>
+
+  <main class="content">
+
+    <!-- Install prompt (Android PWA) -->
+    <div class="install-bar" id="installBar">
+      <p>Instala <strong>Tasas Venezuela</strong> en tu teléfono para acceso rápido sin abrir el browser.</p>
+      <button class="install-btn-ok" id="installBtn">Instalar</button>
+      <button class="install-btn-close" id="installClose" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- Error -->
+    <div class="error-banner" id="errorBanner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="errorText">No se pudo conectar. Verifica tu internet e intenta de nuevo.</span>
+    </div>
+
+    <!-- Live indicator -->
+    <div class="live-bar">
+      <div class="live-pill">
+        <div class="live-dot"></div>
+        En vivo
+      </div>
+      <div class="update-time" id="updateTime">Cargando...</div>
+    </div>
+
+    <!-- Rate cards -->
+    <div class="rates-grid" id="ratesGrid">
+      <!-- BCV USD -->
+      <div class="rate-card">
+        <div class="card-source">
+          <div class="source-dot" style="background:#f59e0b"></div>
+          <span class="source-name">BCV Oficial</span>
+        </div>
+        <div class="rate-value"><div class="rate-skeleton" style="width:90%;height:26px;border-radius:5px"></div></div>
+        <div class="rate-unit" style="margin-top:6px"><div class="rate-skeleton" style="width:70%;height:13px;border-radius:4px;margin-top:6px"></div></div>
+      </div>
+      <!-- Binance P2P -->
+      <div class="rate-card">
+        <div class="card-source">
+          <div class="source-dot" style="background:#f0b90b"></div>
+          <span class="source-name">Binance P2P</span>
+        </div>
+        <div class="rate-value"><div class="rate-skeleton" style="width:90%;height:26px;border-radius:5px"></div></div>
+        <div class="rate-unit"><div class="rate-skeleton" style="width:70%;height:13px;border-radius:4px;margin-top:6px"></div></div>
+      </div>
+      <!-- BCV EUR (full width) -->
+      <div class="rate-card wide">
+        <div class="card-source">
+          <div class="source-dot" style="background:#3b82f6"></div>
+          <span class="source-name">BCV Oficial · Euro</span>
+        </div>
+        <div class="rate-value"><div class="rate-skeleton" style="width:60%;height:26px;border-radius:6px"></div></div>
+        <div class="rate-unit"><div class="rate-skeleton" style="width:50%;height:13px;border-radius:4px;margin-top:6px"></div></div>
+      </div>
+    </div>
+
+    <!-- Calculator -->
+    <p class="section-title">Calculadora</p>
+
+    <div class="calc-card">
+      <div class="calc-top">
+        <div class="calc-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/>
+          </svg>
+          <span>Calculadora</span>
+        </div>
+
+        <!-- Toggle moneda -->
+        <div class="calc-toggle-row" role="group" aria-label="Moneda de entrada">
+          <button type="button" class="toggle-btn active" data-currency="USD" onclick="setInputCurrency('USD')">USD $</button>
+          <button type="button" class="toggle-btn" data-currency="VES" onclick="setInputCurrency('VES')">VES Bs</button>
+        </div>
+
+        <!-- Input monto -->
+        <input class="field-input" type="number" id="calcAmount" value="1" min="0" inputmode="decimal" oninput="convert()" placeholder="0" />
+      </div>
+
+      <!-- Resultados por tasa -->
+      <div class="convert-results" id="convertResults"></div>
+
+      <div class="calc-note" id="calcNote">Cargando tasas...</div>
+    </div>
+
+    <footer class="footer">
+      <div>Fuentes: <strong>BCV Oficial</strong> · Banco Central de Venezuela · <strong>Binance P2P</strong></div>
+      <div>Actualiza cada 60 segundos · Solo referencial</div>
+    </footer>
+
+  </main>
+
+  <script>
+    // ─── State ───────────────────────────────────────────────
+    let rates = { bcv_usd: null, bcv_eur: null, binance_usd: null };
+    let inputCurrency = 'USD';
+    let deferredPrompt = null;
+
+    // ─── Formatting ──────────────────────────────────────────
+    function fmtVES(n) {
+      if (n == null) return '—';
+      return new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+    }
+
+    function fmtUSD(n) {
+      if (n == null) return '—';
+      return new Intl.NumberFormat('es-VE', { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(n);
+    }
+
+    function fmtTime() {
+      return new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // ─── Load Rates ──────────────────────────────────────────
+    // Llama a /api/rates — Netlify Function que corre en servidor,
+    // scrapea BCV directo y consulta Binance P2P. Sin CORS, sin límites.
+
+    async function loadRates() {
+      const btn = document.getElementById('refreshBtn');
+      btn.classList.add('loading');
+      hideError();
+
+      try {
+        const res = await fetch('/api/rates', { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+
+        rates.bcv_usd     = typeof data.bcv_usd     === 'number' ? data.bcv_usd     : null;
+        rates.bcv_eur     = typeof data.bcv_eur     === 'number' ? data.bcv_eur     : null;
+        rates.binance_usd = typeof data.binance_usd === 'number' ? data.binance_usd : null;
+
+        renderCards();
+        convert();
+
+        const hasError = data.sources?.bcv === 'error' || data.sources?.binance === 'error';
+        if (hasError) showError('Algunas tasas no se pudieron actualizar. Mostrando lo disponible.');
+        document.getElementById('updateTime').textContent = 'Actualizado ' + fmtTime();
+
+      } catch (err) {
+        showError('Sin conexion. Verifica tu internet e intenta de nuevo.');
+        document.getElementById('updateTime').textContent = 'Error de conexion';
+      } finally {
+        btn.classList.remove('loading');
+      }
+    }
+
+    // ─── Render rate cards ────────────────────────────────────
+    function renderCards() {
+      const grid = document.getElementById('ratesGrid');
+      grid.innerHTML = `
+        <div class="rate-card">
+          <div class="card-source">
+            <div class="source-dot" style="background:#f59e0b"></div>
+            <span class="source-name">BCV Oficial</span>
+          </div>
+          <div class="rate-value">${rates.bcv_usd ? fmtVES(rates.bcv_usd) : '—'}</div>
+          <div class="rate-unit">Bs por 1 USD · Banco Central</div>
+        </div>
+
+        <div class="rate-card">
+          <div class="card-source">
+            <div class="source-dot" style="background:#f0b90b"></div>
+            <span class="source-name">Binance P2P</span>
+          </div>
+          <div class="rate-value">${rates.binance_usd ? fmtVES(rates.binance_usd) : '—'}</div>
+          <div class="rate-unit">Bs por 1 USDT · P2P</div>
+        </div>
+
+        <div class="rate-card wide">
+          <div class="card-source">
+            <div class="source-dot" style="background:#3b82f6"></div>
+            <span class="source-name">BCV Oficial · Euro</span>
+          </div>
+          <div class="rate-value">${rates.bcv_eur ? fmtVES(rates.bcv_eur) : '—'}</div>
+          <div class="rate-unit">Bs por 1 EUR · Banco Central</div>
+        </div>
+      `;
+    }
+
+    // ─── Converter ──────────────────────────────────────────
+    // Siempre muestra cuántos Bs equivale el monto — una fila por tasa.
+
+    function setInputCurrency(currency) {
+      inputCurrency = currency;
+      document.querySelectorAll('.toggle-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.currency === currency);
+      });
+      convert();
+    }
+
+    function convert() {
+      const amount = parseFloat(document.getElementById('calcAmount').value) || 0;
+      const note = document.getElementById('calcNote');
+      const resultsEl = document.getElementById('convertResults');
+
+      const anyRate = rates.bcv_usd || rates.bcv_eur || rates.binance_usd;
+      if (!anyRate) {
+        resultsEl.innerHTML = '';
+        note.textContent = 'Cargando tasas...';
+        return;
+      }
+
+      const fmtVES = new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const fmtFX  = new Intl.NumberFormat('es-VE', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+
+      let rowsHtml = '';
+
+      if (inputCurrency === 'USD') {
+        // Divisa → Bs: cada tasa muestra cuántos Bs da 1 USD (o el monto)
+        if (rates.bcv_usd)
+          rowsHtml += row('#f59e0b', 'Dólar BCV',   'Bs. ' + fmtVES.format(amount * rates.bcv_usd));
+        if (rates.binance_usd)
+          rowsHtml += row('#f0b90b', 'Binance P2P', 'Bs. ' + fmtVES.format(amount * rates.binance_usd));
+        if (rates.bcv_eur)
+          rowsHtml += row('#3b82f6', 'Euro BCV',    'Bs. ' + fmtVES.format(amount * rates.bcv_eur));
+        note.textContent = amount + ' USD en bolívares · Solo referencial';
+
+      } else if (inputCurrency === 'EUR') {
+        // EUR → Bs directo con la tasa EUR del BCV
+        if (rates.bcv_eur)
+          rowsHtml += row('#3b82f6', 'Euro BCV',    'Bs. ' + fmtVES.format(amount * rates.bcv_eur));
+        // EUR → Bs vía Binance: EUR→USD (vía BCV USD/EUR) → Bs (vía Binance)
+        if (rates.bcv_eur && rates.bcv_usd && rates.binance_usd) {
+          const eurToUsd = (amount * rates.bcv_eur) / rates.bcv_usd;
+          rowsHtml += row('#f0b90b', 'Binance P2P', 'Bs. ' + fmtVES.format(eurToUsd * rates.binance_usd));
+        }
+        if (rates.bcv_usd)
+          rowsHtml += row('#f59e0b', 'Dólar BCV',   'Bs. ' + fmtVES.format(amount * rates.bcv_eur));
+        note.textContent = amount + ' EUR en bolívares · Solo referencial';
+
+      } else { // VES
+        // Bs → divisas
+        if (rates.bcv_usd)
+          rowsHtml += row('#f59e0b', 'Dólar BCV',   '$ '   + fmtFX.format(amount / rates.bcv_usd));
+        if (rates.binance_usd)
+          rowsHtml += row('#f0b90b', 'Binance P2P', '$ '   + fmtFX.format(amount / rates.binance_usd));
+        if (rates.bcv_eur)
+          rowsHtml += row('#3b82f6', 'Euro BCV',    '€ '   + fmtFX.format(amount / rates.bcv_eur));
+        note.textContent = amount + ' Bs. en divisas · Solo referencial';
+      }
+
+      resultsEl.innerHTML = rowsHtml;
+    }
+
+    function row(dot, label, value) {
+      return `
+        <div class="convert-row">
+          <span class="source"><span class="source-dot" style="background:${dot}"></span>${label}</span>
+          <span class="value">${value}</span>
+        </div>`;
+    }
+
+    // ─── Error helpers ────────────────────────────────────────
+    function showError(msg) {
+      const el = document.getElementById('errorBanner');
+      document.getElementById('errorText').textContent = msg;
+      el.style.display = 'flex';
+    }
+
+    function hideError() {
+      document.getElementById('errorBanner').style.display = 'none';
+    }
+
+    // ─── PWA Install prompt (Android) ─────────────────────────
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const bar = document.getElementById('installBar');
+      bar.classList.add('visible');
+    });
+
+    document.getElementById('installBtn').addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      document.getElementById('installBar').classList.remove('visible');
+    });
+
+    document.getElementById('installClose').addEventListener('click', () => {
+      document.getElementById('installBar').classList.remove('visible');
+    });
+
+    window.addEventListener('appinstalled', () => {
+      document.getElementById('installBar').classList.remove('visible');
+    });
+
+    // ─── Service Worker ───────────────────────────────────────
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+
+    // ─── Init ─────────────────────────────────────────────────
+    loadRates();
+    setInterval(loadRates, 60000);
+  </script>
+
+</body>
+</html>

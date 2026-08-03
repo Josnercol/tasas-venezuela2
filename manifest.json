@@ -1,0 +1,16 @@
+{
+  "name": "Tasas Venezuela",
+  "short_name": "Tasas VE",
+  "description": "Tasas de cambio en tiempo real — BCV, Binance P2P y Euro.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#16a34a",
+  "lang": "es",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "categories": ["finance", "utilities"]
+}
