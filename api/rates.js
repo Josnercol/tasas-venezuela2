@@ -4,14 +4,14 @@ export const config = {
   regions: ['gru1'],
 };
 
-async function fetchCotizave(symbol = 'reference') {
+async function fetchCotizave(endpoint = 'reference') {
   const apiKey = process.env.COTIZAVE_API_KEY;
 
   if (!apiKey) {
     throw new Error('COTIZAVE_API_KEY no encontrada');
   }
 
-  const res = await fetch(`https://api.cotizave.com/v1/fx/rates/${symbol}`, {
+  const res = await fetch(`https://api.cotizave.com/v1/fx/rates/${endpoint}`, {
     headers: {
       'X-API-Key': apiKey,
       'Accept': 'application/json',
@@ -56,10 +56,9 @@ export default async function handler(req, res) {
 
   let bcv_usd = null, bcv_eur = null, source = 'error';
 
-  // Procesar USD
+  // Procesar USD (Reference)
   if (czUsdRes.status === 'fulfilled') {
     const d = czUsdRes.value;
-    // Si viene la tasa directo en 'mid' o en propiedades alternativas
     const rate = d?.mid ?? d?.USD?.mid ?? d?.usd?.mid ?? null;
     if (rate) {
       bcv_usd = parseFloat(Number(rate).toFixed(2));
@@ -70,9 +69,18 @@ export default async function handler(req, res) {
   // Procesar EUR
   if (czEurRes.status === 'fulfilled') {
     const d = czEurRes.value;
-    const rate = d?.mid ?? d?.EUR?.mid ?? d?.eur?.mid ?? null;
+    const rate = d?.mid ?? d?.EUR?.mid ?? d?.eur?.mid ?? d?.rates?.EUR ?? null;
     if (rate) {
       bcv_eur = parseFloat(Number(rate).toFixed(2));
+    }
+  }
+
+  // Fallback para Euro si el endpoint /eur no devolvió tasa directamente
+  if (!bcv_eur && czUsdRes.status === 'fulfilled') {
+    const d = czUsdRes.value;
+    const eurRate = d?.EUR?.mid ?? d?.eur?.mid ?? d?.rates?.EUR ?? null;
+    if (eurRate) {
+      bcv_eur = parseFloat(Number(eurRate).toFixed(2));
     }
   }
 
