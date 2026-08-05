@@ -5,11 +5,11 @@ export const config = {
 };
 
 async function fetchCotizave() {
-  // Leemos la API KEY AQUÍ ADENTRO para que siempre lea la variable actualizada de Vercel
+  // Se lee DENTRO de la función para asegurar que tome la variable de Vercel
   const apiKey = process.env.COTIZAVE_API_KEY;
-  
+
   if (!apiKey) {
-    throw new Error('COTIZAVE_API_KEY no encontrada en las variables de Vercel');
+    throw new Error('COTIZAVE_API_KEY no encontrada en Vercel');
   }
 
   const res = await fetch('https://api.cotizave.com/v1/fx/rates/reference', {
@@ -20,10 +20,7 @@ async function fetchCotizave() {
     signal: AbortSignal.timeout(8000),
   });
 
-  if (!res.ok) {
-    throw new Error(`Cotizave HTTP ${res.status}`);
-  }
-
+  if (!res.ok) throw new Error(`Cotizave HTTP ${res.status}`);
   return res.json();
 }
 
@@ -49,7 +46,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
   res.setHeader('Pragma', 'no-cache');
-  
+
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const [czRes, binRes] = await Promise.allSettled([fetchCotizave(), fetchBinance()]);
@@ -58,8 +55,8 @@ export default async function handler(req, res) {
 
   if (czRes.status === 'fulfilled') {
     const d = czRes.value;
-    bcv_usd = d?.USD?.mid ?? d?.usd?.mid ?? d?.bcv?.usd ?? null;
-    bcv_eur = d?.EUR?.mid ?? d?.eur?.mid ?? d?.bcv?.eur ?? null;
+    bcv_usd = d?.USD?.mid ?? d?.usd?.mid ?? d?.bcv?.usd ?? d?.rates?.USD ?? null;
+    bcv_eur = d?.EUR?.mid ?? d?.eur?.mid ?? d?.bcv?.eur ?? d?.rates?.EUR ?? null;
     if (bcv_usd) source = 'cotizave';
   } else {
     console.error('Cotizave failed:', czRes.reason?.message);
