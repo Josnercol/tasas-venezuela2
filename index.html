@@ -624,36 +624,85 @@
     }
 
     // ─── Load Rates ──────────────────────────────────────────
-    // Llama a /api/rates — Netlify Function que corre en servidor,
-    // scrapea BCV directo y consulta Binance P2P. Sin CORS, sin límites.
+    // Consulta 4 fuentes en paralelo y elige la tasa más reciente por timestamp.
+    //
+    //  Fuente A: ve.dolarapi.com  → { promedio, fechaActualizacion }
+    //  Fuente B: bcv.today        → { USD, EUR, updated_at }
+    //  Fuente C: jsDelivr CDN     → respaldo de bcv.today
+    //  Binance:  criptoya.com     → { ask, bid }
 
+    const DOLARAPI_USD     = 'https://ve.dolarapi.com/v1/dolares/oficial';
+    const DOLARAPI_EUR     = 'https://ve.dolarapi.com/v1/euros/oficial';
+    const CRIPTOYA_BINANCE = 'https://criptoya.com/api/binancep2p/USDT/VES/100';
+    const BCV_API          = 'https://bcv.today/api/v1/rate.json';
+    const BCV_CDN          = 'https://cdn.jsdelivr.net/gh/grupoclip/bcv-api/api/v1/rate.json';
+
+    async function fetchJSON(url) {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }
+
+    // Devuelve el valor cuyo timestamp sea más reciente
+    function freshest(a, b) {
+      if (!a.val && !b.val) return null;
+      if (!a.val) return b.val;
+      if (!b.val) return a.val;
+      const tA = a.ts ? new Date(a.ts).getTime() : 0;
+      const tB = b.ts ? new Date(b.ts).getTime() : 0;
+      return tA >= tB ? a.val : b.val;
+    }
+
+    // BCV: desde rates.json generado por GitHub Action cada 30 min
+    // Binance: consulta directa (ya funcionaba sin problemas)
     async function loadRates() {
       const btn = document.getElementById('refreshBtn');
       btn.classList.add('loading');
       hideError();
 
-      try {
-        const res = await fetch('/api/rates', { cache: 'no-store' });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
+      const [bcvRes, binRes] = await Promise.allSettled([
+        // BCV desde archivo estático — siempre fresco, sin CORS
+        fetch('/rates.json?_=' + Date.now(), { cache: 'no-store' }).then(r => r.json()),
 
-        rates.bcv_usd     = typeof data.bcv_usd     === 'number' ? data.bcv_usd     : null;
-        rates.bcv_eur     = typeof data.bcv_eur     === 'number' ? data.bcv_eur     : null;
-        rates.binance_usd = typeof data.binance_usd === 'number' ? data.binance_usd : null;
+        // Binance directo desde el browser — sin problemas de CORS
+        fetch('https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            asset: 'USDT', fiat: 'VES', merchantCheck: false,
+            page: 1, payTypes: [], publisherType: null, rows: 10, tradeType: 'BUY'
+          })
+        }).then(r => r.json()),
+      ]);
 
-        renderCards();
-        convert();
+      // BCV
+      if (bcvRes.status === 'fulfilled') {
+        const d = bcvRes.value;
+        rates.bcv_usd = typeof d.bcv_usd === 'number' ? d.bcv_usd : null;
+        rates.bcv_eur = typeof d.bcv_eur === 'number' ? d.bcv_eur : null;
+      }
 
-        const hasError = data.sources?.bcv === 'error' || data.sources?.binance === 'error';
-        if (hasError) showError('Algunas tasas no se pudieron actualizar. Mostrando lo disponible.');
-        document.getElementById('updateTime').textContent = 'Actualizado ' + fmtTime();
+      // Binance
+      if (binRes.status === 'fulfilled') {
+        const prices = (binRes.value?.data || [])
+          .map(i => parseFloat(i.adv?.price))
+          .filter(p => !isNaN(p) && p > 0);
+        rates.binance_usd = prices.length
+          ? parseFloat((prices.reduce((a, b) => a + b, 0) / prices.length).toFixed(2))
+          : null;
+      }
 
-      } catch (err) {
+      renderCards();
+      convert();
+
+      if (!rates.bcv_usd && !rates.binance_usd) {
         showError('Sin conexion. Verifica tu internet e intenta de nuevo.');
         document.getElementById('updateTime').textContent = 'Error de conexion';
-      } finally {
-        btn.classList.remove('loading');
+      } else {
+        document.getElementById('updateTime').textContent = 'Actualizado ' + fmtTime();
       }
+
+      btn.classList.remove('loading');
     }
 
     // ─── Render rate cards ────────────────────────────────────

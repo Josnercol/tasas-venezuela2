@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/rates.json", "destination": "/public/rates.json" }
+  ]
+}
